@@ -1,0 +1,264 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>StreamerBot Chat</title>
+
+        <script src="streamerbot-client.js"></script>
+
+        <style>
+            :root {
+                --bg: #0f1117;
+                --panel: #161a22;
+                --border: #262b36;
+                --text: #e6e6e6;
+                --muted: #9aa4b2;
+                --accent: #5aa9ff;
+                --good: #4caf50;
+                --warn: #ff9800;
+                --bad: #f44336;
+            }
+
+            * {
+                box-sizing: border-box;
+            }
+
+            body {
+                margin: 0;
+                background: var(--bg);
+                font-family:
+                    system-ui,
+                    -apple-system,
+                    Segoe UI,
+                    Roboto,
+                    sans-serif;
+                color: var(--text);
+                display: flex;
+                flex-direction: column;
+                height: 100vh;
+            }
+
+            header {
+                padding: 12px 16px;
+                background: var(--panel);
+                border-bottom: 1px solid var(--border);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-weight: 600;
+                font-size: 14px;
+            }
+
+            #status {
+                font-size: 12px;
+                padding: 4px 10px;
+                border-radius: 20px;
+            }
+
+            .status-connected {
+                background: var(--good);
+            }
+            .status-connecting {
+                background: var(--warn);
+            }
+            .status-disconnected {
+                background: var(--bad);
+            }
+
+            #chat {
+                flex: 1;
+                overflow-y: auto;
+                padding: 16px;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .message {
+                background: var(--panel);
+                padding: 10px 14px;
+                border-radius: 14px;
+                border: 1px solid var(--border);
+                animation: fadeIn 0.15s ease-out;
+            }
+
+            .meta {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+
+            .user {
+                font-weight: 600;
+            }
+
+            .time {
+                font-size: 11px;
+                color: var(--muted);
+                margin-left: auto;
+            }
+
+            .text {
+                margin-top: 4px;
+                word-wrap: break-word;
+                white-space: pre-wrap;
+            }
+
+            .badge {
+                height: 16px;
+                vertical-align: middle;
+            }
+
+            .platform-icon {
+                height: 14px;
+                width: 14px;
+                vertical-align: middle;
+                flex-shrink: 0;
+            }
+
+            @keyframes fadeIn {
+                from {
+                    opacity: 0;
+                    transform: translateY(4px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+        </style>
+    </head>
+
+    <body>
+        <header>
+            Live Chat
+            <div id="status" class="status-connecting">Connecting…</div>
+        </header>
+
+        <div id="chat"></div>
+
+        <script>
+            const chatContainer = document.getElementById("chat");
+            const statusIndicator = document.getElementById("status");
+
+            function setStatus(state, text) {
+                statusIndicator.className = "status-" + state;
+                statusIndicator.textContent = text;
+            }
+
+            function scrollToBottom() {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+
+            function getTime() {
+                return new Date().toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                });
+            }
+
+            function platformIcon(source) {
+                const svg =
+                    source === "Twitch"
+                        ? `<svg class="platform-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="#9147ff" d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>`
+                        : `<svg class="platform-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path fill="#ff0000" d="M23.495 6.205a3.007 3.007 0 0 0-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 0 0 .527 6.205a31.247 31.247 0 0 0-.522 5.805 31.247 31.247 0 0 0 .522 5.783 3.007 3.007 0 0 0 2.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 0 0 2.088-2.088 31.247 31.247 0 0 0 .5-5.783 31.247 31.247 0 0 0-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"/></svg>`;
+                const span = document.createElement("span");
+                span.innerHTML = svg;
+                span.title = source;
+                return span.firstElementChild;
+            }
+
+            function renderMessage(
+                username,
+                color,
+                messageText,
+                badges,
+                source,
+            ) {
+                const msg = document.createElement("div");
+                msg.className = "message";
+
+                // Meta row
+                const meta = document.createElement("div");
+                meta.className = "meta";
+
+                // Platform icon
+                meta.appendChild(platformIcon(source));
+
+                // Badges
+                (badges || []).forEach((b) => {
+                    if (!b.imageUrl) return;
+                    const img = document.createElement("img");
+                    img.className = "badge";
+                    img.src = b.imageUrl;
+                    img.title = b.name || "";
+                    img.onerror = () => img.remove();
+                    meta.appendChild(img);
+                });
+
+                // Username
+                const userSpan = document.createElement("span");
+                userSpan.className = "user";
+                userSpan.style.color = color || "var(--accent)";
+                userSpan.textContent = username;
+                meta.appendChild(userSpan);
+
+                // Timestamp
+                const timeSpan = document.createElement("span");
+                timeSpan.className = "time";
+                timeSpan.textContent = getTime();
+                meta.appendChild(timeSpan);
+
+                // Message text — textContent prevents XSS
+                const textDiv = document.createElement("div");
+                textDiv.className = "text";
+                textDiv.textContent = messageText;
+
+                msg.appendChild(meta);
+                msg.appendChild(textDiv);
+                chatContainer.appendChild(msg);
+                scrollToBottom();
+            }
+
+            // ── Streamer.bot WebSocket Client ────────────────────────────────────────────
+            // Make sure Streamer.bot's WebSocket Server is bound to 10.0.0.195 (not 127.0.0.1)
+            // under Servers/Clients → WebSocket Server, otherwise remote connections are refused.
+
+            const client = new StreamerbotClient({
+                host: "10.0.0.195",
+                port: 8080,
+                password: "", // fill in if you set a password in Streamer.bot
+                autoReconnect: true,
+                onConnect: () => setStatus("connected", "Connected"),
+                onDisconnect: () => setStatus("disconnected", "Disconnected"),
+            });
+
+            // ── Chat message handlers ────────────────────────────────────────────────────
+            // The @streamerbot/client library exposes typed events as "Source.EventType".
+            // Each handler receives { event, data } — NOT a raw wrapper object.
+
+            function handleChatMessage(e) {
+                const { data, event } = e;
+                if (!data) return;
+
+                const username =
+                    data.user?.name || data.user?.login || "Unknown";
+
+                const displayName = data.user?.displayName || username;
+
+                const color = data.user?.color || "var(--accent)";
+
+                // payload puts the message text at data.text
+                const messageText = data.text || "";
+
+                const badges = data.user?.badges || [];
+                const source = event?.source || "Twitch";
+
+                renderMessage(displayName, color, messageText, badges, source);
+            }
+
+            client.on("Twitch.ChatMessage", handleChatMessage);
+            client.on("YouTube.ChatMessage", handleChatMessage);
+        </script>
+    </body>
+</html>

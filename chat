@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+CHAT_FILE="$HOME/github/remote-streamerbot-chat/chat.html"
+PROFILE_DIR="$HOME/.config/streamerbot-chat-profile"
+
+# Ensure file exists
+if [[ ! -f "$CHAT_FILE" ]]; then
+    echo "Error: $CHAT_FILE not found."
+    exit 1
+fi
+
+# Remove only the SingletonLock so Chromium doesn't hand off to a dead session
+rm -f "$PROFILE_DIR/SingletonLock" "$PROFILE_DIR/SingletonCookie" "$PROFILE_DIR/SingletonSocket"
+
+# Launch Helium directly from the local file — no HTTP server needed.
+# file:// avoids all localhost/IPv4/IPv6 networking issues entirely.
+helium-browser \
+  --user-data-dir="$PROFILE_DIR" \
+  --disable-gpu \
+  --ozone-platform=x11 \
+  --no-first-run \
+  --no-default-browser-check \
+  --disable-extensions \
+  --allow-file-access-from-files \
+  --disable-web-security \
+  --class="StreamerBotChat" \
+  "file://${CHAT_FILE}"
