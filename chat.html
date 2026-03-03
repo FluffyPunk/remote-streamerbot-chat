@@ -128,7 +128,7 @@
                 font-weight: 600;
             }
 
-            .event-pill .ep-type {
+            .event-pill .ep-data {
                 color: var(--muted);
                 font-size: 11px;
             }
@@ -303,13 +303,13 @@
                 }
 
                 const typeSpan = document.createElement("span");
-                typeSpan.className = "ep-type";
+                typeSpan.className = "ep-data";
                 typeSpan.textContent = type;
                 pill.appendChild(typeSpan);
 
                 if (value) {
                     const valueSpan = document.createElement("span");
-                    valueSpan.className = "ep-value";
+                    valueSpan.className = "ep-data";
                     valueSpan.textContent = value;
                     pill.appendChild(valueSpan);
                 }
@@ -542,8 +542,8 @@
                     
                     case "ReSub":
                         name = data.user.name;
-                        type = data.is_prime ? "PrimeReSub" : `Tier ${data.sub_tier} ${type} for ${data.durationMonths}`;
-                        value = `${data.cumulativeMonths}m`; 
+                        type = data.is_prime ? "PrimeReSub" : `Tier ${data.subTier} ${type} for ${data.durationMonths}`;
+                        value = `/ Total: ${data.cumulativeMonths}m`; 
                         break;
 
                     case "GiftBomb":
@@ -555,7 +555,7 @@
                     case "GiftSub":
                         if (!data.randomCommunitySubGift){
                         name = data.user.name;
-                        value = `Tier ${data.subTier} of ${data.durationMonths} to ${data.recepient}`
+                        value = `${data.durationMonths} months of Tier ${data.subTier} to ${data.recepient.name}`
                        }
                        break;
                     
