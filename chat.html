@@ -187,6 +187,10 @@
                 animation: fadeIn 0.15s ease-out;
             }
 
+            .message.mention {
+                border-left: 4px solid var(--warn)
+            }
+
             .meta {
                 display: flex;
                 align-items: center;
@@ -390,9 +394,12 @@
                 color,
                 messageText,
                 badges,
+                emotes,
+                mention, 
+                messageId
             ) {
                 const msg = document.createElement("div");
-                msg.className = "message";
+                msg.className = mention ? "message mention" : "message";
 
                 const meta = document.createElement("div");
                 meta.className = "meta";
@@ -413,11 +420,16 @@
                 userSpan.className = "user";
                 userSpan.style.color = color || "var(--accent)";
                 userSpan.textContent = username;
+                msg.name = username;
+                msg.id = messageId;
                 meta.appendChild(userSpan);
 
                 // Message text inline
                 const textSpan = document.createElement("span");
                 textSpan.className = "text";
+                (emotes || []).forEach(e => {
+                    messageText.replaceAll(e.name, `<img src=${e.imageUrl} class="badge"/>`)
+                })
                 textSpan.textContent = " " + messageText;
                 meta.appendChild(textSpan);
 
@@ -427,8 +439,30 @@
                 timeSpan.textContent = getTime();
                 meta.appendChild(timeSpan);
 
+
+
                 msg.appendChild(meta);
                 container.prepend(msg);
+            }
+
+            function purgeOnBan(e) {
+                const { data, event } = e;
+                if (!data) return;
+                const username = data.user?.name;
+                const container =
+                    source === "YouTube" ? youtubeContainer : twitchContainer;
+                let messages = container.getElementsByName(username);
+                (messages || []).forEach(m => m.remove());
+            }
+
+            function removeMessage(e) {
+                const { data, event } = e;
+                if (!data) return;
+                const messageId = data.messageId;
+                const container =
+                    source === "YouTube" ? youtubeContainer : twitchContainer;
+                let message = container.getElementById(messageId);
+                if (message) message.remove();
             }
 
             // ── Streamer.bot WebSocket Client ────────────────────────────────────────────
@@ -461,7 +495,7 @@
 
                 const source = event?.source || "Twitch";
 
-                let displayName, color, messageText, badges;
+                let displayName, color, messageText, badge, mention, messageId;
 
                 if (source === "YouTube") {
                     displayName = data.user?.name || "Unknown";
@@ -469,6 +503,7 @@
                     messageText = data.message || "";
                     badges = [];
                 } else {
+                    let emotes = data.emotes
                     // Twitch: text lives at data.message.message, user info at data.message / data.user
                     displayName =
                         data.message?.displayName ||
@@ -480,6 +515,8 @@
                         "var(--twitch)";
                     messageText = data.message?.message || data.text || "";
                     badges = data.message?.badges || data.user?.badges || [];
+                    mention = messageText.toLowerCase().includes("christitustech") != -1;
+                    messageId = data.messageId
                 }
 
                 const container =
@@ -490,36 +527,19 @@
                     color,
                     messageText,
                     badges,
+                    emotes,
+                    mention,
+                    messageId
                 );
             }
 
             client.on("Twitch.ChatMessage", handleChatMessage);
             client.on("YouTube.Message", handleChatMessage);
+            client.on("*.UserBanned", purgeOnBan);
+            client.on("Twitch.UserTimedOut", purgeOnBan); // Even with fact that YT has timeouts, there no event for that in docs
+            client.on("Twitch.MessageDeleted", removeMessage); // YT WIP, no data about messages, so DIY
 
             // ── Events ticker ────────────────────────────────────────────────────────────
-
-            //const EXCLUDED_EVENTS = new Set([
-            //    "ChatMessage",
-            //    "Message",
-            //    "StatisticsUpdated",
-            //    "ViewerCountUpdate",
-            //    "GoalProgress",
-            //    "FirstWords",
-            //    "FirstWord",
-            //    "Follow",
-            //    "WatchStreak",
-            //    "UserBanned",
-            //    "AutoModMessageHeld",
-            //]);
-
-            const twitchEventWhitelist = new Set([
-                "Sub",
-                "ReSub",
-                "Raid",
-                "Cheer",
-                "GiftSub",
-                "GiftBomb"
-            ]);
 
             const youtubeEventWhitelist = new Set([
                 "MembershipGift",
@@ -534,7 +554,6 @@
                 if (!event) return;
                 let type = event.type;
                 switch (event.type) {
-                    // You are free to remove durationMonths if it's actually shows 3+ months subs
                     case "Sub":
                         name = data.user.name;
                         type = data.is_prime ? "PrimeSub" : `Tier ${data.sub_tier} ${type} for ${data.durationMonths}`;
