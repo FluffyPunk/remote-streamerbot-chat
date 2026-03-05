@@ -410,9 +410,6 @@
                 const msg = document.createElement("div");
                 msg.className = mention ? "message mention" : "message";
 
-                const reply = document.createElement("div");
-                reply.className = "reply";
-
                 const meta = document.createElement("div");
                 meta.className = "meta";
 
@@ -512,7 +509,7 @@
 
                 const source = event?.source || "Twitch";
 
-                let displayName, color, messageText, badges, mention, messageId;
+                let displayName, color, messageText, badges, mention, messageId, emotes, reply;
 
                 if (source === "YouTube") {
                     displayName = data.user?.name || "Unknown";
@@ -520,7 +517,7 @@
                     messageText = data.message || "";
                     badges = [];
                 } else {
-                    let emotes = data.emotes
+                    emotes = data.emotes;
                     // Twitch: text lives at data.message.message, user info at data.message / data.user
                     displayName =
                         data.message?.displayName ||
@@ -533,8 +530,8 @@
                     messageText = data.message?.message || data.text || "";
                     badges = data.message?.badges || data.user?.badges || [];
                     mention = messageText.toLowerCase().includes("christitustech") != -1;
-                    messageId = data.messageId
-                    reply = data.reply
+                    messageId = data.messageId;
+                    reply = data.reply;
                 }
 
                 const container =
@@ -554,7 +551,7 @@
 
             client.on("Twitch.ChatMessage", handleChatMessage);
             client.on("YouTube.Message", handleChatMessage);
-            client.on("*.UserBanned", purgeOnBan);
+            client.on("Twitch.UserBanned", purgeOnBan);
             client.on("Twitch.UserTimedOut", purgeOnBan); // Even with fact that YT has timeouts, there no event for that in docs
             client.on("Twitch.MessageDeleted", removeMessage); // YT WIP, no data about messages, so DIY
 
