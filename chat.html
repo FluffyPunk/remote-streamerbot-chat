@@ -518,7 +518,7 @@
                     messageText = data.message || "";
                     badges = [];
                 } else {
-                    emotes = data.emotes;
+                    emotes = data.message.emotes;
                     // Twitch: text lives at data.message.message, user info at data.message / data.user
                     displayName =
                         data.message?.displayName ||
