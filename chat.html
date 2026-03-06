@@ -451,17 +451,24 @@
             emote.src = emotes[0].imageUrl;
             textSpan.append(emote, " ");
             emotes.shift();
-          } else if (
-            /(https?:\/\/|www\.|[a-zA-Z0-9-]+\.[a-zA-Z]{2,})/.test(w)
-          ) {
-            const link = document.createElement("a");
-            link.href = w.startsWith("http") ? w : "http://" + w;
-            link.textContent = w;
-            link.target = "_blank";
-            link.className = "link";
-            textSpan.append(link, " ");
           } else {
-            textSpan.append(w, " ");
+            const match = w.match(
+              /(https?:\/\/|www\.|(?:[a-zA-Z0-9-]+\.)*[a-zA-Z0-9-]+\.[a-zA-Z]{2,}|(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?)(\/[^\s,]*)?/,
+            );
+            if (match) {
+              const url = match[0];
+              const link = document.createElement("a");
+              link.href = url.startsWith("http") ? url : "https://" + url;
+              link.textContent = url;
+              link.target = "_blank";
+              link.className = "link";
+              textSpan.append(link);
+              const rest = w.slice(match.index + url.length);
+              if (rest) textSpan.append(rest);
+              textSpan.append(" ");
+            } else {
+              textSpan.append(w, " ");
+            }
           }
         }
         meta.appendChild(textSpan);
