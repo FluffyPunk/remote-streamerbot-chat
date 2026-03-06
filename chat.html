@@ -213,6 +213,11 @@
         white-space: pre-wrap;
       }
 
+      .link {
+        color: var(--accent);
+        text-decoration: underline;
+      }
+
       .reply {
         font-size: 11px;
         color: var(--muted);
@@ -446,6 +451,15 @@
             emote.src = emotes[0].imageUrl;
             textSpan.append(emote, " ");
             emotes.shift();
+          } else if (
+            /(https?:\/\/|www\.|[a-zA-Z0-9-]+\.[a-zA-Z]{2,})/.test(w)
+          ) {
+            const link = document.createElement("a");
+            link.href = w.startsWith("http") ? w : "http://" + w;
+            link.textContent = w;
+            link.target = "_blank";
+            link.className = "link";
+            textSpan.append(link, " ");
           } else {
             textSpan.append(w, " ");
           }
